@@ -214,10 +214,10 @@ function buildUrl(prompt, seed, [w, h]) {
   return `${API}${p}?width=${w}&height=${h}&seed=${seed}&nologo=true`;
 }
 
-async function fetchWithRetry(url, signal, onRetry) {
+async function fetchWithRetry(url, onRetry) {
   let attempt = 0;
   while (true) {
-    const res = await fetch(url, { signal, mode: 'cors', cache: 'no-store' });
+    const res = await fetch(url, { mode: 'cors', cache: 'no-store' });
     if (res.ok) return res;
     if ((res.status === 429 || res.status === 503) && attempt < 2) {
       const wait = Number(res.headers.get('retry-after')) || 4 * (attempt + 1);
@@ -285,7 +285,6 @@ async function generate() {
         try {
           const res = await fetchWithRetry(
             buildUrl(prompt, seed, [w, h]),
-            undefined,
             (wait) => setStatus(`Queue is full — retrying in ${wait}s`, 'busy'),
           );
           const blob = await res.blob();
@@ -658,7 +657,8 @@ async function boot() {
   grow();
   wire();
 
-  el.seed.value = String(randomSeed());
+  // Keep a restored seed; only invent one when there is nothing to restore.
+  if (!el.seed.value) el.seed.value = String(randomSeed());
 
   state.shots = (await store.all()).sort((a, b) => b.createdAt - a.createdAt);
   renderGallery();
